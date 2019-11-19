@@ -3,23 +3,21 @@
 
 import sys
 import Ice
-Ice.loadSlice('Interface.ice')
-import TrawlNet
+Ice.loadSlice('TrawlNet.ice')
+import TrawlNet 
 
 class Client(Ice.Application):
+    '''Clase cliente'''
     def run(self, argv):
-        base = self.communicator().stringToProxy(argv[1])
-        orchestrator = TrawlNet.downloadTask(url)
+        proxy = self.communicator().stringToProxy(argv[1])
+        print(argv[1])
+        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
 
-        if not servidor:
+        if not orchestrator:
             raise RuntimeError('Invalid proxy')
 
+        orchestrator.send(argv[3], argv[2])
 
-if __name__ == "__main__":
-    print('''
---------------------------------          
-        Youtube to mp3
---------------------------------    
-    ''')
+        return 0
 
-
+sys.exit(Client().main(sys.argv))
