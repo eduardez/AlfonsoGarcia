@@ -12,15 +12,13 @@ import TrawlNet
 
 
 class DownloaderI(TrawlNet.Downloader):
-    ''' Sirviente del Orchestrator '''
-    downloader = None
+    ''' Sirviente del Downloader '''
     def addDownloadTask (self, url, current=None):
-        print('Tarea de descarga para (%s) en cola' % url)
         download_mp3(url)
 
 
 class Server(Ice.Application):
-    '''Código del servidor servidor'''
+    '''Código del servidor de descargas'''
     def run(self, args):
         # if len(args) < 2:
         #     print('ERROR: No se han introducido el numero de argumentos valido.')
@@ -36,7 +34,7 @@ class Server(Ice.Application):
         adapter.activate()
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-
+        
         return 0
     
 
@@ -89,10 +87,10 @@ def download_mp3(url, destination='./'):
 
 
 if __name__ == "__main__":
-    print('''
---------------------------------          
-        Downloader
---------------------------------    
-    ''' )
+#     print('''
+# --------------------------------          
+#         Downloader
+# --------------------------------    
+#     ''' )
     server = Server()
     sys.exit(server.main(sys.argv))
