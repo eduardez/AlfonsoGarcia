@@ -16,7 +16,7 @@ class Client(Ice.Application):
         if not orchestrator:
             raise RuntimeError('Invalid proxy')
 
-        orchestrator.send(argv[3], argv[2])
+        orchestrator.downloadTask(argv[2])
 
         return 0
 

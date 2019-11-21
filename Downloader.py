@@ -2,8 +2,46 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import Ice
 import os
+Ice.loadSlice('TrawlNet.ice')
+import TrawlNet 
 
+
+# --------------- REGION DE ESCUCHA DE DOWNLOADER  (ZeroC) ---------------
+
+
+class DownloaderI(TrawlNet.Downloader):
+    ''' Sirviente del Orchestrator '''
+    downloader = None
+    def addDownloadTask (self, url, current=None):
+        print('Tarea de descarga para (%s) en cola' % url)
+        download_mp3(url)
+
+
+class Server(Ice.Application):
+    '''Código del servidor servidor'''
+    def run(self, args):
+        # if len(args) < 2:
+        #     print('ERROR: No se han introducido el numero de argumentos valido.')
+        #     return 1
+        broker = self.communicator()
+        servant = DownloaderI()
+
+        adapter = broker.createObjectAdapter("DownloaderAdapter")
+        proxy = adapter.add(servant, broker.stringToIdentity("downloader"))
+
+        print(proxy, flush=True)
+
+        adapter.activate()
+        self.shutdownOnInterrupt()
+        broker.waitForShutdown()
+
+        return 0
+    
+
+
+# --------------- REGION DE DESCARGAS DE YOUTUBE ---------------
 try:
     import youtube_dl
 except ImportError:
@@ -49,3 +87,12 @@ def download_mp3(url, destination='./'):
     filename = filename[:filename.rindex('.') + 1]
     return filename + options['postprocessors'][0]['preferredcodec']
 
+
+if __name__ == "__main__":
+    print('''
+--------------------------------          
+        Downloader
+--------------------------------    
+    ''' )
+    server = Server()
+    sys.exit(server.main(sys.argv))
