@@ -27,7 +27,7 @@ class Server(Ice.Application):
         #     return 1
         
         # Crear downloader -----
-        downProxy = 'downloader -t -e 1.1:tcp -h localhost -p 9090 -t 60000'
+        downProxy = readProxy()
         proxyDown = self.communicator().stringToProxy(downProxy)
         downloader = TrawlNet.DownloaderPrx.checkedCast(proxyDown)
         
@@ -45,7 +45,11 @@ class Server(Ice.Application):
         broker.waitForShutdown()
 
         return 0
-    
+
+
+def readProxy():
+    with open('./proxy.out', 'r') as f:
+        return f.readline() 
 
 
 if __name__ == "__main__":
@@ -56,4 +60,5 @@ if __name__ == "__main__":
     ''' )
     server = Server()
     sys.exit(server.main(sys.argv))
+
 
