@@ -1,4 +1,6 @@
-Lucía Alfonso García
-Eduardo García Aparicio
 
-Nuestro servidor será el Oschestrator y el sirviente el Downloader.
+  [Directorio](https://github.com/luciaagarcia/AlfonsoGarcia/tree/L1)
+---
+ * Lucía Alfonso García
+ * Eduardo García Aparicio
+
