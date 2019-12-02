@@ -1,1 +1,11 @@
-downloader -t -e 1.1:tcp -h 161.67.208.50 -p 9090 -t 60000:tcp -h 172.19.185.99 -p 9090 -t 60000
+downloader -t -e 1.1:tcp -h 172.19.157.224 -p 33717 -t 10000
+[vimeo] 373928777: Downloading webpage
+[vimeo] 373928777: Extracting information
+[vimeo] 373928777: Downloading webpage
+[vimeo] 373928777: Downloading JSON metadata
+[vimeo] 373928777: Downloading akfire_interconnect_quic m3u8 information
+[vimeo] 373928777: Downloading fastly_skyfire m3u8 information
+[vimeo] 373928777: Downloading akfire_interconnect_quic MPD information
+[vimeo] 373928777: Downloading akfire_interconnect_quic MPD information
+[vimeo] 373928777: Downloading fastly_skyfire MPD information
+[vimeo] 373928777: Downloading fastly_skyfire MPD information

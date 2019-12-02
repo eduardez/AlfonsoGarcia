@@ -17,10 +17,32 @@ class OrchestratorI(TrawlNet.Orchestrator):
         print('Peticion de descarga, url: %s' % url)
         if self.downloader is not None:
             return self.downloader.addDownloadTask(url)
+    
+    def getFileList(self):
+        raise NotImplementedError
+    
+    def announce(self, other_orchestrator):
+        raise NotImplementedError
+    
+    
+class OrchestratorEvent(TrawlNet.OrchestratorEvent):
+    ''' '''
+    def hello(self):
+        raise NotImplementedError
+    
+    
+class Orchestrator():
+    ''' Implementacion del orquestador PRINCIPAL 
+    (el que va a tener la lista de todos los orquestadores) '''
+    def __init__(self):
+        self.broker = None
+        self.servant = None
+        self.orchestrator_list = []
 
 
 class Server(Ice.Application):
     '''Código del servidor servidor'''
+
     def run(self, args):
         # if len(args) < 2:
         #     print('ERROR: No se han introducido el numero de argumentos valido.')

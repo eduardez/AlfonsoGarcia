@@ -17,8 +17,8 @@ class Client(Ice.Application):
             raise RuntimeError('Invalid proxy')
 
         print(str(argv[2]))
-        orchestrator.downloadTask(argv[2])
-
+        file_info = orchestrator.downloadTask(argv[2])
+        print(f'[Titulo: {str(file_info.name)} \nHash: {str(file_info.hash)}]')
         return 0
 
 

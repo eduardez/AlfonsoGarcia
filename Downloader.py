@@ -15,6 +15,23 @@ class DownloaderI(TrawlNet.Downloader):
     ''' Sirviente del Downloader '''
     def addDownloadTask (self, url, current=None):
         download_mp3(url)
+        return self.createFileInfo(url)
+
+    
+    def createFileInfo(self, url):
+        file_info = TrawlNet.FileInfo()
+        file_info.name = ''
+        file_info.hash = ''
+        try:
+            from youtube_dl import YoutubeDL
+            with YoutubeDL() as youtube:
+                info = youtube.extract_info(url, download=False)
+                file_info.hash = info.get("id", None)
+                file_info.name = info.get('title', None)
+            return file_info
+        except Exception:
+            print('ERROR: Hubo un error creando el objeto FileInfo.')
+            sys.exit(1) 
 
 
 class Server(Ice.Application):
@@ -45,6 +62,7 @@ try:
 except ImportError:
     print('ERROR: do you have installed youtube-dl library?')
     sys.exit(1)
+
 
 
 class NullLogger:
