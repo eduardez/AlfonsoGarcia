@@ -4,9 +4,10 @@
 #en el archivo config poner IceConfig.IPvVersion = 4 para librarnos de las ipv 6
 
 import sys
-import Ice
+import Ice, IceStorm
 Ice.loadSlice('TrawlNet.ice')
 import TrawlNet 
+import HieloStorm
 
 
 class OrchestratorI(TrawlNet.Orchestrator):
@@ -15,11 +16,38 @@ class OrchestratorI(TrawlNet.Orchestrator):
     
     def downloadTask (self, url, current=None):
         print('Peticion de descarga, url: %s' % url)
-        if self.downloader is not None:
-            return self.downloader.addDownloadTask(url)
+        hash = ''
+        file_list=self.getFileList()
+        from youtube_dl import YoutubeDL
+        with YoutubeDL() as youtube:
+            info = youtube.extract_info(url, download=False)
+            hash = info.get("id", None)
+        if hash in file_list:
+            #Acceder al orchestrator correcto y devolver el fichero
+            print("Ese fichero ya esta descargado")
+            pass
+        else:
+            if self.downloader is not None:
+                file_info = self.downloader.addDownloadTask(url)
+                with open('./file_list.txt', 'a+') as f:
+                    #En el write tambien hay que añadir el orchestator para saber quien tiene el archivo
+                    f.write(file_info.hash + '\n')
+                return file_info
+            
     
-    def getFileList(self):
-        raise NotImplementedError
+    def getFileList(self, current=None):
+        list_file = []
+        archivo = None
+        with open('./file_list.txt', 'r') as f:
+            archivo = f.readlines()
+        for x in range(0, len(archivo), 2):
+            file_info = TrawlNet.FileInfo()
+            file_info.hash = archivo[x]
+            file_info.name = archivo[x+1]
+            list_file.append(file_info)
+
+        print("Peticion de informacion de archivos disponibles")
+        return list_file
     
     def announce(self, other_orchestrator):
         raise NotImplementedError
@@ -29,15 +57,23 @@ class OrchestratorEvent(TrawlNet.OrchestratorEvent):
     ''' '''
     def hello(self):
         raise NotImplementedError
-    
+ 
+ 
+class UpdateEvent(TrawlNet.UpdateEvent):
+    def newFile(self, file_info):
+        print(f'HA VENIDO {str(file_info)}')
+ 
     
 class Orchestrator():
     ''' Implementacion del orquestador PRINCIPAL 
-    (el que va a tener la lista de todos los orquestadores) '''
+    (el que va a tener la lista de todos los orquestadores) 
+    El orchestrator es subscriptor'''
     def __init__(self):
         self.broker = None
         self.servant = None
         self.orchestrator_list = []
+        self.downloader = None
+        
 
 
 class Server(Ice.Application):
@@ -56,15 +92,22 @@ class Server(Ice.Application):
         # -----------------------------------------------
         broker = self.communicator()
         servant = OrchestratorI()
+        servant2 = UpdateEvent()
         servant.downloader=downloader
         
         adapter = broker.createObjectAdapter("OrchestratorAdapter")
         proxy = adapter.add(servant, broker.stringToIdentity("orchestrator"))
+        # subscriber2 = adapter.addWithUUID(servant2)
+        # topic_manager = HieloStorm.getTopicManager(self)
+        # topic = HieloStorm.getTopic('UpdateEvents', topic_manager)
+        # topic.subscribeAndGetPublisher({}, subscriber)
+
         print(proxy, flush=True)
         
         adapter.activate()
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
+        # topic.unsubscribe(subscriber)
 
         return 0
 
