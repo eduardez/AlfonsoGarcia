@@ -3,7 +3,7 @@
 
 #en el archivo config poner IceConfig.IPvVersion = 4 para librarnos de las ipv 6
 
-import sys
+import sys, utiles
 from pathlib import Path as path
 import Ice, IceStorm
 Ice.loadSlice('TrawlNet.ice')
@@ -13,7 +13,8 @@ import TrawlNet
 class OrchestratorI(TrawlNet.Orchestrator):
     ''' Sirviente del Orchestrator '''
     downloader = None
-    
+    orchestrator_list = {}
+
     def downloadTask (self, url, current=None):
         print('Peticion de descarga, url: %s' % url)
         hash = ''
@@ -21,7 +22,7 @@ class OrchestratorI(TrawlNet.Orchestrator):
         with YoutubeDL() as youtube:
             info = youtube.extract_info(url, download=False)
             hash = info.get("id", None)
-        if self.isInList(hash=hash):
+        if utiles.isInList(hash):
             print('ERROR*** Cancion ya descargada.')
         else:
             print('Descargando cancion.')
@@ -32,63 +33,46 @@ class OrchestratorI(TrawlNet.Orchestrator):
 
     def getFileList(self, current=None):
         print("Peticion de informacion de archivos disponibles")
-        try:  
-            list_file = []
-            archivo = None
-            with open('./file_list.txt', 'r') as f:
-                archivo = f.readlines()
-                
-            for num_line in range(0, len(archivo)):
-                file_info = TrawlNet.FileInfo()
-                if (num_line % 2) == 0:
-                    file_info.name = archivo[num_line]
-                    file_info.hash = archivo[num_line + 1]
-                    list_file.append(file_info)
-            return list_file
-        except FileExistsError:
-            print('ERROR*** No existe la lista de archivos descargados.')
-            return []
-    
-    def isInList(self, current = None, hash = None):
-        archivo = './file_list.txt'
-        objeto_archivo = path(archivo)
-        if objeto_archivo.exists():
-            with open(archivo, 'r') as f:
-                if hash == f.readline()[:-1]:
-                    #Acceder al orchestrator correcto y devolver el fichero
-                    print("Ese fichero ya esta descargado")
-                    return True
-        else:
-            return False
+        list_file = []
+        archivo = utiles.jsonRead()
+        if not archivo:
+            return archivo
+        for cancion in archivo['canciones']:
+            file_info = TrawlNet.FileInfo()
+            file_info.name = cancion['name']
+            file_info.hash = cancion['hash']
+            list_file.append(file_info)
+        return list_file
         
-    def addToList(self, current = None, file_info = None):
-        with open('./file_list.txt', 'a+') as f:
-            f.write(file_info.name + '\n')
-            f.write(file_info.hash + '\n')
+    def addToList(self, file_info, current = None):
+        json = utiles.addToList(file_info.name, file_info.hash)
+        utiles.jsonWrite(json)
 
-    def announce(self, other_orchestrator):
-        raise NotImplementedError
-    
-    
+    def announce(self, other_orchestrator, current = None ):
+        print('\n[Orchestrator]--> Anuncio de ' + str(other_orchestrator))
+        self.orchestrator_list[other_orchestrator.ice_toString()] = other_orchestrator
+        print(f'Lista de orchestrators actualizada: {len(self.orchestrator_list)} orchestrators \n{str(self.orchestrator_list.keys())}')
+        
+
 class OrchestratorEvent(TrawlNet.OrchestratorEvent):
     ''' '''
     orchestrator = None
-    def hello(self, current = None, new_orchestrator = None):
-        self.orchestrator.orchestrator_list.append(new_orchestrator.proxy)
+    def hello(self, new_orchestrator, current = None):
+        print('\n[OrchestratorEvent]--> Hello from ' + str(new_orchestrator))
+        self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator#ice_toString() para devolver el proxy en str
+        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))
  
- 
+
 class UpdateEvent(TrawlNet.UpdateEvent):
-    def newFile(self, file_info):
-        print(f'HA VENIDO {str(file_info)}')
+    orchestrator = None
+    def newFile(self, file_info, current = None):
+        if not utiles.isInList(file_info.hash):
+            print(f'NO ESTA {str(file_info)}')
+            self.orchestrator.addToList(file_info)
+        else:
+            print(f'Ya en lista {str(file_info)}')
+
  
-    
-class Orchestrator():
-    ''' Implementacion del objeto orquestador '''
-    def __init__(self):
-        self.proxy = None
-        self.orchestrator_list = []
-        
-        
 class Server(Ice.Application):
     '''Código del servidor servidor'''
     def get_topic_manager(self):
@@ -97,10 +81,22 @@ class Server(Ice.Application):
         if proxy is None:
             print("property {} not set".format(key))
             return None
-
         print("Using IceStorm in: '%s'" % key)
         return IceStorm.TopicManagerPrx.checkedCast(proxy)
 
+    def get_topic(self, topic_name):
+        topic_manager = self.get_topic_manager()
+        topic = None
+        if not topic_manager:
+            print('Invalid proxy')
+            return 2
+        try:
+            topic = topic_manager.retrieve(topic_name)
+        except IceStorm.NoSuchTopic:
+            print("No se ha encontrado ese tonico")
+            topic = topic_manager.create(topic_name)
+        return topic
+    
     def run(self, args):
         # if len(args) < 2:
         #     print('ERROR: No se han introducido el numero de argumentos valido.')
@@ -113,34 +109,40 @@ class Server(Ice.Application):
         
         # ---------------- Creacion de objetos --------------------
         broker = self.communicator()
-        orquestrator_object = Orchestrator() #Creamos el objeto para SOLO contener la informacion de los orqu
-        servant = OrchestratorI() #Creamos el servant
+        ochestrator_servant = OrchestratorI() #Creamos el servant
         hello_servant = OrchestratorEvent() #Servant del canal OrquestratorSync
-        servant.downloader=downloader
-        hello_servant.orchestrator = orquestrator_object #Lo metemos para cuando llegue un hollo, actualizar el orq
+        update_servant = UpdateEvent()
+        
+        ochestrator_servant.downloader=downloader
+        hello_servant.orchestrator = ochestrator_servant #Lo metemos para cuando llegue un hollo, actualizar el orq
+        update_servant.orchestrator = ochestrator_servant
         
         # ------------------- proxys -------------------
         adapter = broker.createObjectAdapter("OrchestratorAdapter")
-        proxy = adapter.addWithUUID(servant)
-        orquestrator_object.proxy = proxy
+        proxy = adapter.addWithUUID(ochestrator_servant)
+        proxyHello = adapter.addWithUUID(hello_servant)
+        proxyUpdate = adapter.addWithUUID(update_servant)
+        ochestrator_servant.proxy = proxy
         
         # ------------------- Subscripciones -------------------
-        topic_manager = self.get_topic_manager()
-        if not topic_manager:
-            print('Invalid proxy')
-            return 2
-        topic_name = 'OrchestratorSync'
-        qos = {} # Que coño es esto
-        try:
-            topic = topic_manager.retrieve(topic_name)
-        except IceStorm.NoSuchTopic:
-            print("No se ha encontrado ese tonico")
-            topic = topic_manager.create(topic_name)
-        topic.subscribeAndGetPublisher(qos, proxy)
+        topic_hello = self.get_topic('OrchestratorSync')
+        topic_hello.subscribeAndGetPublisher({}, proxyHello)
+        
+        topic_update = self.get_topic('UpdateEvents')
+        topic_update.subscribeAndGetPublisher({}, proxyUpdate)
                 
         # ---------------- Publicaciones ----------------------
-        publisher = topic.getPublisher()
-        hello_publish = None #hasta aqui hemos llegao
+        # Mensajes hello
+        publisher_hello = topic_hello.getPublisher()
+        publisher_hello_proxy = TrawlNet.OrchestratorEventPrx.uncheckedCast(publisher_hello)
+        publisher_hello_proxy.hello(TrawlNet.OrchestratorPrx.checkedCast(proxy))
+        
+        # Mensajes update
+        publisher_update = topic_update.getPublisher()
+        publisher_update_proxy = TrawlNet.UpdateEventPrx.uncheckedCast(publisher_update)
+        for file in ochestrator_servant.getFileList():
+            print(f'Comprobando {str(file)}')
+            publisher_update_proxy.newFile(file)
         
         # -----------------------------------------------
         print(proxy, flush=True)
@@ -148,7 +150,8 @@ class Server(Ice.Application):
         adapter.activate()
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-        topic.unsubscribe(proxy)
+        topic_hello.unsubscribe(proxyHello)
+        topic_update.unsubscribe(proxyUpdate)
 
         return 0
 

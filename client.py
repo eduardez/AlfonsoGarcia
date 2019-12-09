@@ -26,7 +26,6 @@ class Client(Ice.Application):
             file = orchestrator.getFileList()
             print(file)
             return 0
-            
 
 
 sys.exit(Client().main(sys.argv))
