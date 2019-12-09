@@ -6,7 +6,6 @@ import Ice, IceStorm
 import os
 Ice.loadSlice('TrawlNet.ice')
 import TrawlNet
-import HieloStorm
 
 
 # --------------- REGION DE ESCUCHA DE DOWNLOADER  (ZeroC) ---------------

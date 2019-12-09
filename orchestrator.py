@@ -8,7 +8,6 @@ from pathlib import Path as path
 import Ice, IceStorm
 Ice.loadSlice('TrawlNet.ice')
 import TrawlNet 
-import HieloStorm
 
 
 class OrchestratorI(TrawlNet.Orchestrator):
