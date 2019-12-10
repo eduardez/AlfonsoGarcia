@@ -14,10 +14,11 @@ import TrawlNet
 class DownloaderI(TrawlNet.Downloader):
     ''' Sirviente del Downloader '''
     iceApplication = None
+    publisher_update_proxy = None
     def addDownloadTask (self, url, current=None):
         download_mp3(url)
         file_info = self.createFileInfo(url)
-        #self.updateEvent(file_info)
+        self.updateEvent(file_info)
         return file_info
     
     def createFileInfo(self, url):
@@ -35,26 +36,45 @@ class DownloaderI(TrawlNet.Downloader):
             print('ERROR: Hubo un error creando el objeto FileInfo.')
             sys.exit(1) 
     
-    # def updateEvent(self, file_info):
-    #     topic_name = 'UpdateEvents'
-    #     topic = HieloStorm.getTopic(topic_name, HieloStorm.getTopicManager(self.iceApplication) )
-    #     publisher = HieloStorm.getPublisher(topic)
-    #     update_event_publisher = TrawlNet.UpdateEventPrx.uncheckedCast(publisher)
-    #     update_event_publisher.newFile()
+    def updateEvent(self, file_info):
+        self.publisher_update_proxy.newFile(file_info)
         
 
 class Server(Ice.Application):
     '''Código del servidor de descargas
     El downloader es publicador'''
+    def get_topic_manager(self):
+        key = 'IceStorm.TopicManager.Proxy'
+        proxy = self.communicator().propertyToProxy(key)
+        if proxy is None:
+            return None
+        return IceStorm.TopicManagerPrx.checkedCast(proxy)
+    
+    def get_topic(self, topic_name):
+        topic_manager = self.get_topic_manager()
+        topic = None
+        if not topic_manager:
+            return 2
+        try:
+            topic = topic_manager.retrieve(topic_name)
+        except IceStorm.NoSuchTopic:
+            topic = topic_manager.create(topic_name)
+        return topic
+    
     def run(self, args):
         # if len(args) < 2:
         #     print('ERROR: No se han introducido el numero de argumentos valido.')
         #     return 1
         broker = self.communicator()
-        servant = DownloaderI()
-        servant.iceApplication = self
+        servant_downloader = DownloaderI()
+        servant_downloader.iceApplication = self
         adapter = broker.createObjectAdapter("DownloaderAdapter")
-        proxy = adapter.addWithUUID(servant)
+        proxy = adapter.addWithUUID(servant_downloader)
+
+        topic_update = self.get_topic('UpdateEvents')
+        publisher_update = topic_update.getPublisher()
+        publisher_update_proxy = TrawlNet.UpdateEventPrx.uncheckedCast(publisher_update)
+        servant_downloader.publisher_update_proxy = publisher_update_proxy
 
         print(proxy, flush=True)
 

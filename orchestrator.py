@@ -14,16 +14,23 @@ class OrchestratorI(TrawlNet.Orchestrator):
     ''' Sirviente del Orchestrator '''
     downloader = None
     orchestrator_list = {}
-
+    publisher_update_proxy = None
+    
     def downloadTask (self, url, current=None):
         print('Peticion de descarga, url: %s' % url)
         hash = ''
+        name = ''
         from youtube_dl import YoutubeDL
         with YoutubeDL() as youtube:
             info = youtube.extract_info(url, download=False)
             hash = info.get("id", None)
+            name = info.get("title", None)
         if utiles.isInList(hash):
+            file_info = TrawlNet.FileInfo()
+            file_info.name = name
+            file_info.hash = hash
             print('ERROR*** Cancion ya descargada.')
+            return file_info
         else:
             print('Descargando cancion.')
             if self.downloader is not None:
@@ -52,7 +59,11 @@ class OrchestratorI(TrawlNet.Orchestrator):
         print('\n[Orchestrator]--> Anuncio de ' + str(other_orchestrator))
         self.orchestrator_list[other_orchestrator.ice_toString()] = other_orchestrator
         print(f'Lista de orchestrators actualizada: {len(self.orchestrator_list)} orchestrators \n{str(self.orchestrator_list.keys())}')
-        
+
+    def updateFiles(self, current = None):
+        for file in self.getFileList():
+            self.publisher_update_proxy.newFile(file)
+
 
 class OrchestratorEvent(TrawlNet.OrchestratorEvent):
     ''' '''
@@ -60,17 +71,18 @@ class OrchestratorEvent(TrawlNet.OrchestratorEvent):
     def hello(self, new_orchestrator, current = None):
         print('\n[OrchestratorEvent]--> Hello from ' + str(new_orchestrator))
         self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator#ice_toString() para devolver el proxy en str
-        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))
- 
+        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))#llamo al announce del nuevo orchestrator para anunciarme
+        self.orchestrator.updateFiles()
+
 
 class UpdateEvent(TrawlNet.UpdateEvent):
     orchestrator = None
     def newFile(self, file_info, current = None):
         if not utiles.isInList(file_info.hash):
-            print(f'NO ESTA {str(file_info)}')
+            print(f'NO ESTA {str(file_info.name)}')
             self.orchestrator.addToList(file_info)
         else:
-            print(f'Ya en lista {str(file_info)}')
+            print(f'Ya en lista {str(file_info.name)}')
 
  
 class Server(Ice.Application):
@@ -104,6 +116,7 @@ class Server(Ice.Application):
         
         # ---------------- Creacion del downloader --------------------
         downProxy = args[1]
+        print('\n00202002\n+++++\n' + str(downProxy))
         proxyDown = self.communicator().stringToProxy(downProxy)
         downloader = TrawlNet.DownloaderPrx.checkedCast(proxyDown)
         
@@ -135,15 +148,18 @@ class Server(Ice.Application):
         # Mensajes hello
         publisher_hello = topic_hello.getPublisher()
         publisher_hello_proxy = TrawlNet.OrchestratorEventPrx.uncheckedCast(publisher_hello)
-        publisher_hello_proxy.hello(TrawlNet.OrchestratorPrx.checkedCast(proxy))
         
         # Mensajes update
         publisher_update = topic_update.getPublisher()
         publisher_update_proxy = TrawlNet.UpdateEventPrx.uncheckedCast(publisher_update)
+        ochestrator_servant.publisher_update_proxy = publisher_update_proxy
+
+                    
+        # --------------- Acciones sobre los proxys ---------------------
+        publisher_hello_proxy.hello(TrawlNet.OrchestratorPrx.checkedCast(proxy))
         for file in ochestrator_servant.getFileList():
-            print(f'Comprobando {str(file)}')
             publisher_update_proxy.newFile(file)
-        
+
         # -----------------------------------------------
         print(proxy, flush=True)
         
