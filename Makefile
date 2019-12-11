@@ -4,8 +4,6 @@
 json_1 := {"canciones": [{"name":"Cancion Server 1", "hash":"95678123"}]}
 json_2 := {"canciones": [{"name":"Cancion Server 2", "hash":"sdfugy6"}]}
 
-all:
-
 clean:
 	$(info Borrando archivos innecesarios...)
 	$(RM) -r /tmp/server2
