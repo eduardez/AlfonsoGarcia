@@ -116,7 +116,6 @@ class Server(Ice.Application):
         
         # ---------------- Creacion del downloader --------------------
         downProxy = args[1]
-        print('\n00202002\n+++++\n' + str(downProxy))
         proxyDown = self.communicator().stringToProxy(downProxy)
         downloader = TrawlNet.DownloaderPrx.checkedCast(proxyDown)
         

@@ -1,64 +1,83 @@
 #!/usr/bin/make -f
 # -*- mode:makefile -*-
 
-json_1 := {"canciones": [{"name":"Cancion Server 1", "hash":"95678123"}]}
-json_2 := {"canciones": [{"name":"Cancion Server 2", "hash":"sdfugy6"}]}
+# ---------------------------------------------------------------------------
+# ---------------------     IMPORTANTE      ---------------------------------
+#
+# 		Para ejecutar bien el make en todo su esplendor, poner
+#		la variable NUM_SERVERS al numero de servidores deseado.
+#		
+#		Si por algun casual quieres cambiar ese numero de servidores y/o
+#		quieres reiniciar sus datos, utilizar re-run.
+#
+#				usage: run | re-run NUM_SERVERS=n
+#
+# ---------------------------------------------------------------------------
+
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+SERVER_BASEDIR_PATH := /tmp/server
+NUM_SERVERS := 2
+RANGE:=$(shell seq 1 $(NUM_SERVERS))
+ARCHIVOS = downloader.py server.config orchestrator.py run_server.sh TrawlNet.ice utiles.py
+
+all:
+
+
 
 clean:
 	$(info Borrando archivos innecesarios...)
-	$(RM) -r /tmp/server2
+	$(RM) -r /tmp/server*
 	$(RM) -r __pycache__/
 	$(RM) -r file_list.json
 	$(RM) -r ./*.mp3
 
 run:
-	$(MAKE) app-workspace & sleep 1
+	$(MAKE) server-workspace & 
+	sleep 1
 	$(MAKE) run-icestorm &
-	sleep 2
-	$(MAKE) run-server1 &
-	sleep 5
-	$(MAKE) run-server2 &
-	sleep 2
+	sleep 2	
+	$(MAKE) run-server &
+	sleep 1
 	$(MAKE) run-client
 
-server-test:clean
-	$(MAKE) app-workspace & sleep 1
+re-run:
+	$(MAKE) clean
+	$(MAKE) server-workspace & 
+	sleep 1
 	$(MAKE) run-icestorm &
-	sleep 2
-	$(MAKE) run-server1 &
-	sleep 5
-	$(MAKE) run-server2 &
-	sleep 5
-	cat file_list.json
-	cat /tmp/server2/file_list.json
+	sleep 2	
+	$(MAKE) run-server &
+	sleep 1
+	$(MAKE) run-client
+
 
 run-icestorm:
 	$(info Ejecutando IceStorm...)
 	gnome-terminal -- bash -c \
-	"sh run_icestorm.sh; bash"
+	"./run_icestorm.sh; bash"
 
-run-server1:
-	$(info Ejecutando Servidor Nº1...)
-	gnome-terminal -- bash -c \
-	"cd /home/edulcorante/Escritorio/Practicas/DISTRIBUIDOS/practicaYoutube/AlfonsoGarcia/  && ./run_server.sh; bash"
-
-run-server2:
-	$(info Ejecutando Servidor Nº2...)
-	gnome-terminal -- bash -c \
-	"cd /tmp/server2/  && ./run_server.sh; bash"
+run-server:
+	$(info Ejecutando Servidores...)
+#hay un pequeño problema con este metodo, y es que va a ejecutar los orquestadores de 
+# TODAS las carpetas server, es decir, aunque pongas NUM_SERVERS = N, va a ejecutar
+# tantos orquestadores como carpetas haya, por eso hay que ejecutar un make clean
+	for f in /tmp/server*;\
+		do gnome-terminal -- bash -c "$${f}/run_server.sh; bash" & sleep 2;\
+	done;
 
 run-client:
 	$(info Ejecutando Cliente...)
 	gnome-terminal -- bash -c \
 	"echo 'Consola del cliente. Uso: ./run_client <proxy> <url>'; bash"
 
-app-workspace:
-	$(info Creando workspace)
-	mkdir -p /tmp/server2/
-	mkdir -p IceStorm/
-	cp downloader.py server.config orchestrator.py run_server.sh TrawlNet.ice utiles.py  /tmp/server2/
-	touch file_list.json
-	echo '${json_1}' > file_list.json
-	touch /tmp/server2/file_list.json
-	echo '${json_2}' > /tmp/server2/file_list.json
-	chmod 775 ./*
+server-workspace:
+#Crear los directorios
+	$(foreach var,$(RANGE),mkdir -p $(SERVER_BASEDIR_PATH)$(var)) &
+#Copiar los archivos
+	cd $(shell dirname $(mkfile_path))
+	$(foreach num_serv,$(RANGE),\
+		$(foreach nombre_archivo,$(ARCHIVOS),\
+			cp $(nombre_archivo) $(SERVER_BASEDIR_PATH)$(num_serv)/ &))
+	chmod 775 /tmp/server*
+	
