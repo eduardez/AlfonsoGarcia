@@ -19,7 +19,7 @@ current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
 SERVER_BASEDIR_PATH := /tmp/server
 NUM_SERVERS := 2
 RANGE:=$(shell seq 1 $(NUM_SERVERS))
-ARCHIVOS = downloader.py server.config orchestrator.py run_server.sh TrawlNet.ice utiles.py
+ARCHIVOS = downloader_factory.py server.config orchestrator.py run_server.sh trawlnet.ice utiles.py
 
 all:
 
@@ -63,7 +63,10 @@ run-server:
 # TODAS las carpetas server, es decir, aunque pongas NUM_SERVERS = N, va a ejecutar
 # tantos orquestadores como carpetas haya, por eso hay que ejecutar un make clean
 	for f in /tmp/server*;\
-		do gnome-terminal -- bash -c "$${f}/run_server.sh; bash" & sleep 2;\
+		do \
+		cd $${f};\
+		pwd;\
+		gnome-terminal -- bash -c "sh run_server.sh; bash" & sleep 2;\
 	done;
 
 run-client:

@@ -3,7 +3,7 @@
 
 import sys
 import Ice
-Ice.loadSlice('TrawlNet.ice')
+Ice.loadSlice('trawlnet.ice')
 import TrawlNet 
 
 class Client(Ice.Application):

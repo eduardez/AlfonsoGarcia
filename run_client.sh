@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 
+
 PYTHON=python3
 
 CLIENT_CONFIG=server.config

@@ -4,9 +4,11 @@
 import sys
 import Ice, IceStorm
 import os
-Ice.loadSlice('TrawlNet.ice')
+Ice.loadSlice('trawlnet.ice')
 import TrawlNet
 
+APP_DIRECTORY = './'
+DOWNLOADS_DIRECTORY = os.path.join(APP_DIRECTORY, 'downloads')
 
 # --------------- REGION DE ESCUCHA DE DOWNLOADER  (ZeroC) ---------------
 
@@ -15,7 +17,7 @@ class DownloaderI(TrawlNet.Downloader):
     ''' Sirviente del Downloader '''
     iceApplication = None
     publisher_update_proxy = None
-    def addDownloadTask (self, url, current=None):
+    def addDownloadTask (self, url, current):
         download_mp3(url)
         file_info = self.createFileInfo(url)
         self.updateEvent(file_info)
@@ -38,7 +40,25 @@ class DownloaderI(TrawlNet.Downloader):
     
     def updateEvent(self, file_info):
         self.publisher_update_proxy.newFile(file_info)
+    
+    def destroy(self, current):
+        try:
+            current.adapter.remove(current.id)
+            print('DOWNLOADER DESTROYED', flush=True)
+        except Exception as e:
+            print(e, flush=True)
+
         
+class DownloaderFactoryI(TrawlNet.DownloaderFactory):
+    publisher_update_proxy = None
+    def create(self, current):
+        servant = DownloaderI()
+        servant.publisher_update_proxy = self.publisher_update_proxy
+        proxy = current.adapter.addWithUUID(servant)
+        print('# New downloader created.', flush=True)
+
+        return TrawlNet.DownloaderPrx.checkedCast(proxy)
+
 
 class Server(Ice.Application):
     '''Código del servidor de descargas
@@ -66,15 +86,15 @@ class Server(Ice.Application):
         #     print('ERROR: No se han introducido el numero de argumentos valido.')
         #     return 1
         broker = self.communicator()
-        servant_downloader = DownloaderI()
-        servant_downloader.iceApplication = self
+        servant_downloader_factory = DownloaderFactoryI()
+        servant_downloader_factory.iceApplication = self
         adapter = broker.createObjectAdapter("DownloaderAdapter")
-        proxy = adapter.addWithUUID(servant_downloader)
+        proxy = adapter.addWithUUID(servant_downloader_factory)
 
         topic_update = self.get_topic('UpdateEvents')
         publisher_update = topic_update.getPublisher()
         publisher_update_proxy = TrawlNet.UpdateEventPrx.uncheckedCast(publisher_update)
-        servant_downloader.publisher_update_proxy = publisher_update_proxy
+        servant_downloader_factory.publisher_update_proxy = publisher_update_proxy
 
         print(proxy, flush=True)
 
