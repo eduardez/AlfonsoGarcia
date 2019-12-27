@@ -17,7 +17,8 @@ class DownloaderI(TrawlNet.Downloader):
     ''' Sirviente del Downloader '''
     iceApplication = None
     publisher_update_proxy = None
-    def addDownloadTask (self, url, current):
+    
+    def addDownloadTask(self, url, current):
         download_mp3(url)
         file_info = self.createFileInfo(url)
         self.updateEvent(file_info)
@@ -51,6 +52,7 @@ class DownloaderI(TrawlNet.Downloader):
         
 class DownloaderFactoryI(TrawlNet.DownloaderFactory):
     publisher_update_proxy = None
+    
     def create(self, current):
         servant = DownloaderI()
         servant.publisher_update_proxy = self.publisher_update_proxy
@@ -101,9 +103,8 @@ class Server(Ice.Application):
         adapter.activate()
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-        
+  
         return 0
-    
 
 
 # --------------- REGION DE DESCARGAS DE YOUTUBE ---------------
