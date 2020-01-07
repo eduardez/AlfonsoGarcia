@@ -3,7 +3,7 @@
 
 #en el archivo config poner IceConfig.IPvVersion = 4 para librarnos de las ipv 6
 
-import sys, utiles
+import sys, utils as utiles
 from pathlib import Path as path
 import Ice, IceStorm
 Ice.loadSlice('trawlnet.ice')
@@ -55,17 +55,25 @@ class OrchestratorI(TrawlNet.Orchestrator):
             file_info.hash = cancion['hash']
             list_file.append(file_info)
         return list_file
-        
-    def addToList(self, file_info, current = None):
+
+    def getFile(self, file_name, current=None):
+        print(f'\n[Orchestrator]Peticion de transferencia. Archivo: {file_name}')
+        for orchest in self.orchestrator_list.values():
+            try:
+                return orchest.transfer_factory.create(file_name)
+            except FileNotFoundError:
+                print('Este orchestrator no tiene ese archivo.\n')
+
+    def addToList(self, file_info, current=None):
         json = utiles.addToList(file_info.name, file_info.hash)
         utiles.jsonWrite(json)
 
-    def announce(self, other_orchestrator, current = None ):
+    def announce(self, other_orchestrator, current=None):
         print('\n[Orchestrator]Anuncio de ' + str(other_orchestrator))
         self.orchestrator_list[other_orchestrator.ice_toString()] = other_orchestrator
         print(f'\n[Orchestrator] Lista de orchestrators actualizada: {len(self.orchestrator_list)} orchestrators \n{str(self.orchestrator_list.keys())}')
 
-    def updateFiles(self, current = None):
+    def updateFiles(self, current=None):
         for file in self.getFileList():
             self.publisher_update_proxy.newFile(file)
 
@@ -73,7 +81,8 @@ class OrchestratorI(TrawlNet.Orchestrator):
 class OrchestratorEvent(TrawlNet.OrchestratorEvent):
     ''' '''
     orchestrator = None
-    def hello(self, new_orchestrator, current = None):
+
+    def hello(self, new_orchestrator, current=None):
         print('\n[OrchestratorEvent]--> Hello from ' + str(new_orchestrator))
         self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator#ice_toString() para devolver el proxy en str
         new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))#llamo al announce del nuevo orchestrator para anunciarme
@@ -82,17 +91,18 @@ class OrchestratorEvent(TrawlNet.OrchestratorEvent):
 
 class UpdateEvent(TrawlNet.UpdateEvent):
     orchestrator = None
-    def newFile(self, file_info, current = None):
+
+    def newFile(self, file_info, current=None):
         if not utiles.isInList(file_info.hash):
             print(f'NO ESTA {str(file_info.name)}')
             self.orchestrator.addToList(file_info)
         else:
             print(f'Ya en lista {str(file_info.name)}')
 
- 
+
 class Server(Ice.Application):
     '''Código del servidor servidor'''
-        
+
     def get_topic_manager(self):
         key = 'IceStorm.TopicManager.Proxy'
         proxy = self.communicator().propertyToProxy(key)
@@ -114,57 +124,60 @@ class Server(Ice.Application):
             print("No se ha encontrado ese tonico")
             topic = topic_manager.create(topic_name)
         return topic
-    
+
+    def addProxyToFile(self, proxy):
+        utiles.appendProxyToFile(proxy)
+
     def run(self, args):
         # if len(args) < 2:
         #     print('ERROR: No se han introducido el numero de argumentos valido.')
         #     return 1
-        
+
         # ---------------- Creacion del downloader factory --------------------
         down_factory_proxy = args[1]
         proxy_downloader_factory = self.communicator().stringToProxy(down_factory_proxy)
         downloader_factory = TrawlNet.DownloaderFactoryPrx.checkedCast(proxy_downloader_factory)
 
         # ---------------- Creacion del transfer factory --------------------
-        proxy_transfer_factory = self.communicator().stringToProxy(None)
+        transfer_factory_proxy = args[2]
+        proxy_transfer_factory = self.communicator().stringToProxy(transfer_factory_proxy)
         transfer_factory = TrawlNet.TransferFactoryPrx.checkedCast(proxy_transfer_factory)
-        
+
         # ---------------- Creacion de objetos --------------------
         broker = self.communicator()
-        orchestrator_servant = OrchestratorI() #Creamos el servant
-        hello_servant = OrchestratorEvent() #Servant del canal OrquestratorSync
+        orchestrator_servant = OrchestratorI()  # Creamos el servant
+        hello_servant = OrchestratorEvent()  # Servant del canal OrquestratorSync
         update_servant = UpdateEvent()
-        
+
         orchestrator_servant.downloader_factory = downloader_factory
         orchestrator_servant.transfer_factory = transfer_factory
-        hello_servant.orchestrator = orchestrator_servant #Lo metemos para cuando llegue un hollo, actualizar el orq
+        hello_servant.orchestrator = orchestrator_servant  # Lo metemos para cuando llegue un hollo, actualizar el orq
         update_servant.orchestrator = orchestrator_servant
-        
+
         # ------------------- proxys -------------------
         adapter = broker.createObjectAdapter("OrchestratorAdapter")
         proxy = adapter.addWithUUID(orchestrator_servant)
         proxy_hello = adapter.addWithUUID(hello_servant)
         proxy_update = adapter.addWithUUID(update_servant)
         orchestrator_servant.proxy = proxy
-        
+
         # ------------------- Subscripciones -------------------
         topic_hello = self.get_topic('OrchestratorSync')
         topic_hello.subscribeAndGetPublisher({}, proxy_hello)
-        
+
         topic_update = self.get_topic('UpdateEvents')
         topic_update.subscribeAndGetPublisher({}, proxy_update)
-                
+
         # ---------------- Publicaciones ----------------------
         # Mensajes hello
         publisher_hello = topic_hello.getPublisher()
         publisher_hello_proxy = TrawlNet.OrchestratorEventPrx.uncheckedCast(publisher_hello)
-        
+
         # Mensajes update
         publisher_update = topic_update.getPublisher()
         publisher_update_proxy = TrawlNet.UpdateEventPrx.uncheckedCast(publisher_update)
         orchestrator_servant.publisher_update_proxy = publisher_update_proxy
 
-                    
         # --------------- Acciones sobre los proxys ---------------------
         publisher_hello_proxy.hello(TrawlNet.OrchestratorPrx.checkedCast(proxy))
         for file in orchestrator_servant.getFileList():
@@ -172,7 +185,8 @@ class Server(Ice.Application):
 
         # -----------------------------------------------
         print(proxy, flush=True)
-        
+        self.addProxyToFile(proxy.ice_toString())
+
         adapter.activate()
         self.shutdownOnInterrupt()
         broker.waitForShutdown()

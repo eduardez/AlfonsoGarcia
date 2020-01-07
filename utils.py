@@ -1,9 +1,23 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, json
+import json
 
 PATH_TO_JSON = './file_list.json'
+
+
+def appendProxyToFile(proxy):
+    tmp_proxy_file = open("/tmp/trawlnet_proxylist", "a+")
+    tmp_proxy_file.write(proxy + '\n')
+
+
+def readProxyfile():
+    proxy_array = []
+    with open('/tmp/trawlnet_proxylist') as proxy_list_file:
+        for line in proxy_list_file:
+            proxy_array.append(line.rstrip('\n'))
+    return proxy_array
+
 
 def isInList(hash):
     json = jsonRead()
@@ -12,12 +26,14 @@ def isInList(hash):
             return True
         else:
             False
-            
+
+
 def addToList(name, hash):
     json = jsonRead()
-    json['canciones'].append({'name' : name, 'hash' : hash})
+    json['canciones'].append({'name': name, 'hash': hash})
     return json
-    
+
+
 def jsonRead():
     try:
         with open(PATH_TO_JSON) as json_file:
@@ -28,7 +44,7 @@ def jsonRead():
         with open(PATH_TO_JSON, 'w') as file:
             file.write('{"canciones": []}')
         return []
-            
+      
 
 def jsonWrite(json_data):
     with open(PATH_TO_JSON, 'w') as salida:

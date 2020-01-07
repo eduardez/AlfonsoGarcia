@@ -19,7 +19,7 @@ current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
 SERVER_BASEDIR_PATH := /tmp/server
 NUM_SERVERS := 2
 RANGE:=$(shell seq 1 $(NUM_SERVERS))
-ARCHIVOS = downloader_factory.py server.config orchestrator.py run_server.sh trawlnet.ice utiles.py
+ARCHIVOS = downloader_factory.py transfer_factory.py server.config orchestrator.py run_server.sh trawlnet.ice utils.py
 
 all:
 
@@ -31,17 +31,9 @@ clean:
 	$(RM) -r __pycache__/
 	$(RM) -r file_list.json
 	$(RM) -r ./*.mp3
+	$(RM) -r /tmp/trawlnet_proxylist
 
 run:
-	$(MAKE) server-workspace & 
-	sleep 1
-	$(MAKE) run-icestorm &
-	sleep 2	
-	$(MAKE) run-server &
-	sleep 1
-	$(MAKE) run-client
-
-re-run:
 	$(MAKE) clean
 	$(MAKE) server-workspace & 
 	sleep 1
@@ -49,8 +41,6 @@ re-run:
 	sleep 2	
 	$(MAKE) run-server &
 	sleep 1
-	$(MAKE) run-client
-
 
 run-icestorm:
 	$(info Ejecutando IceStorm...)
@@ -66,13 +56,14 @@ run-server:
 		do \
 		cd $${f};\
 		pwd;\
-		gnome-terminal -- bash -c "sh run_server.sh; bash" & sleep 2;\
+		gnome-terminal -- bash -c "./run_server.sh; bash" & sleep 2;\
 	done;
+	$(MAKE) run-client
+
 
 run-client:
 	$(info Ejecutando Cliente...)
-	gnome-terminal -- bash -c \
-	"echo 'Consola del cliente. Uso: ./run_client <proxy> <url>'; bash"
+	gnome-terminal -- bash -c "./run_client.sh; bash"
 
 server-workspace:
 #Crear los directorios

@@ -17,13 +17,13 @@ class DownloaderI(TrawlNet.Downloader):
     ''' Sirviente del Downloader '''
     iceApplication = None
     publisher_update_proxy = None
-    
+
     def addDownloadTask(self, url, current):
-        download_mp3(url)
+        download_mp3(url, destination=DOWNLOADS_DIRECTORY)
         file_info = self.createFileInfo(url)
         self.updateEvent(file_info)
         return file_info
-    
+
     def createFileInfo(self, url):
         file_info = TrawlNet.FileInfo()
         file_info.name = ''
@@ -37,11 +37,11 @@ class DownloaderI(TrawlNet.Downloader):
             return file_info
         except Exception:
             print('ERROR: Hubo un error creando el objeto FileInfo.')
-            sys.exit(1) 
-    
+            sys.exit(1)
+
     def updateEvent(self, file_info):
         self.publisher_update_proxy.newFile(file_info)
-    
+
     def destroy(self, current):
         try:
             current.adapter.remove(current.id)
@@ -49,10 +49,10 @@ class DownloaderI(TrawlNet.Downloader):
         except Exception as e:
             print(e, flush=True)
 
-        
+
 class DownloaderFactoryI(TrawlNet.DownloaderFactory):
     publisher_update_proxy = None
-    
+
     def create(self, current):
         servant = DownloaderI()
         servant.publisher_update_proxy = self.publisher_update_proxy
@@ -71,7 +71,7 @@ class Server(Ice.Application):
         if proxy is None:
             return None
         return IceStorm.TopicManagerPrx.checkedCast(proxy)
-    
+
     def get_topic(self, topic_name):
         topic_manager = self.get_topic_manager()
         topic = None
@@ -82,11 +82,8 @@ class Server(Ice.Application):
         except IceStorm.NoSuchTopic:
             topic = topic_manager.create(topic_name)
         return topic
-    
+
     def run(self, args):
-        # if len(args) < 2:
-        #     print('ERROR: No se han introducido el numero de argumentos valido.')
-        #     return 1
         broker = self.communicator()
         servant_downloader_factory = DownloaderFactoryI()
         servant_downloader_factory.iceApplication = self
@@ -103,7 +100,7 @@ class Server(Ice.Application):
         adapter.activate()
         self.shutdownOnInterrupt()
         broker.waitForShutdown()
-  
+
         return 0
 
 

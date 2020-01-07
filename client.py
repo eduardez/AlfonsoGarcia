@@ -2,28 +2,42 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 import Ice
+import utils
+import binascii
+import random
 Ice.loadSlice('trawlnet.ice')
-import TrawlNet 
+import TrawlNet
+
+
+APP_DIRECTORY = './'
+DOWNLOADS_DIRECTORY = os.path.join(APP_DIRECTORY, 'downloads')
+
 
 class Client(Ice.Application):
     '''Clase cliente'''
     def run(self, argv):
-        # proxy = self.communicator().stringToProxy(argv[1])
-        # print(argv[1])
-        # orchestrator = TrawlNet.OrchestratorPrx.uncheckedCast(proxy)
-
-        # if not orchestrator:
-        #     raise RuntimeError('Invalid proxy')
+        orchestrator_proxy = random.choice(utils.readProxyfile())
+        orchestrator_proxy = utils.readProxyfile()[1]
+        proxy = self.communicator().stringToProxy(orchestrator_proxy)
+        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
+        if not orchestrator:
+            raise RuntimeError('Invalid proxy')
+        print('Enviando peticion a \n' + str(orchestrator))
 
         if len(argv) > 2 and len(argv) < 4:
             if argv[1] == '--download':
-                print('Descargando: %s'% str(argv[2]))
+                print('Descargando: %s' % str(argv[2]))
                 file_info = orchestrator.downloadTask(argv[2])
                 print(f'[Titulo: {str(file_info.name)} \nHash: {str(file_info.hash)}]')
                 return 0
+
             elif argv[1] == '--transfer':
-                pass
+                print('Obteniendo: %s' % str(argv[2]))
+                file_name = self.checkExtension(argv[2])
+                self.transfer_request(file_name, orchestrator)
+
             else:
                 print('****Opcion no reconocido.\nSaliendo...')
         elif len(argv) == 1:
@@ -33,6 +47,42 @@ class Client(Ice.Application):
             return 0
         else:
             print('****ERROR EN LOS ARGUMENTOS.\nSaliendo...')
-        
+
+    def checkExtension(self, file_name):
+        if file_name.endswith('.mp3'):
+            return file_name
+        else:
+            return file_name + '.mp3'
+
+    def createDownloadsDir(self):
+        if not os.path.exists(DOWNLOADS_DIRECTORY):
+            os.makedirs(DOWNLOADS_DIRECTORY)
+
+    def transfer_request(self, file_name, orchestrator):
+        remote_EOF = False
+        BLOCK_SIZE = 1024
+        transfer = None
+        self.createDownloadsDir()
+
+        try:
+            transfer = orchestrator.getFile(file_name)
+        except TrawlNet.TransferError as e:
+            print(e.reason)
+            return 1
+
+        with open(os.path.join(DOWNLOADS_DIRECTORY, file_name), 'wb+') as file_:
+            remote_EOF = False
+            while not remote_EOF:
+                data = transfer.recv(BLOCK_SIZE)
+                if len(data) > 1:
+                    data = data[1:]
+                data = binascii.a2b_base64(data)
+                remote_EOF = len(data) < BLOCK_SIZE
+                if data:
+                    file_.write(data)
+            transfer.close()
+
+        transfer.destroy()
+        print('Transfer finished!')
 
 sys.exit(Client().main(sys.argv))
