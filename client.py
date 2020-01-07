@@ -18,10 +18,15 @@ DOWNLOADS_DIRECTORY = os.path.join(APP_DIRECTORY, 'downloads')
 class Client(Ice.Application):
     '''Clase cliente'''
     def run(self, argv):
-        orchestrator_proxy = random.choice(utils.readProxyfile())
-        orchestrator_proxy = utils.readProxyfile()[1]
-        proxy = self.communicator().stringToProxy(orchestrator_proxy)
-        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
+        orchestrator_dictionary = {}
+
+        for orchestrator_proxy in utils.readProxyfile():
+            proxy = self.communicator().stringToProxy(orchestrator_proxy)
+            orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
+            orchestrator_dictionary[orchestrator_proxy] = orchestrator
+
+        orchestrator = random.choice(list(orchestrator_dictionary.values()))
+
         if not orchestrator:
             raise RuntimeError('Invalid proxy')
         print('Enviando peticion a \n' + str(orchestrator))
@@ -36,7 +41,11 @@ class Client(Ice.Application):
             elif argv[1] == '--transfer':
                 print('Obteniendo: %s' % str(argv[2]))
                 file_name = self.checkExtension(argv[2])
-                self.transfer_request(file_name, orchestrator)
+                for orch in orchestrator_dictionary.values():
+                    try:
+                        self.transfer_request(file_name, orch)
+                    except Exception:
+                        pass
 
             else:
                 print('****Opcion no reconocido.\nSaliendo...')

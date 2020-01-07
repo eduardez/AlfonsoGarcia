@@ -1,2 +1,6 @@
 
 IceStorm/
+
+__pycache__/
+
+downloads/

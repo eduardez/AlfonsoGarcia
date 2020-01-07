@@ -4,6 +4,7 @@
 #en el archivo config poner IceConfig.IPvVersion = 4 para librarnos de las ipv 6
 
 import sys, utils as utiles
+import random
 from pathlib import Path as path
 import Ice, IceStorm
 Ice.loadSlice('trawlnet.ice')
@@ -16,6 +17,7 @@ class OrchestratorI(TrawlNet.Orchestrator):
     publisher_update_proxy = None
     downloader_factory = None
     transfer_factory = None
+    proxy = None
 
     def downloadTask (self, url, current):
         print('\n[Orchestrator]Peticion de descarga, url: %s' % url)
@@ -58,11 +60,14 @@ class OrchestratorI(TrawlNet.Orchestrator):
 
     def getFile(self, file_name, current=None):
         print(f'\n[Orchestrator]Peticion de transferencia. Archivo: {file_name}')
-        for orchest in self.orchestrator_list.values():
+        transfer = None
+        for orch in self.orchestrator_list.values():
             try:
-                return orchest.transfer_factory.create(file_name)
-            except FileNotFoundError:
-                print('Este orchestrator no tiene ese archivo.\n')
+                transfer = self.transfer_factory.create(file_name)
+            except Ice.UnknownException:
+                print('\n[Orchestrator]Este orchestrator no tiene ese archivo. Probando con otro...\n')
+            finally:
+                return transfer
 
     def addToList(self, file_info, current=None):
         json = utiles.addToList(file_info.name, file_info.hash)
@@ -84,8 +89,8 @@ class OrchestratorEvent(TrawlNet.OrchestratorEvent):
 
     def hello(self, new_orchestrator, current=None):
         print('\n[OrchestratorEvent]--> Hello from ' + str(new_orchestrator))
-        self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator#ice_toString() para devolver el proxy en str
-        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))#llamo al announce del nuevo orchestrator para anunciarme
+        self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator  # ice_toString() para devolver el proxy en str
+        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))  # llamo al announce del nuevo orchestrator para anunciarme
         self.orchestrator.updateFiles()
 
 
