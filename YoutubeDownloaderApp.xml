@@ -2,7 +2,6 @@
 <!-- This file was written by IceGrid GUI -->
 <icegrid>
    <application name="YoutubeDownloaderApp">
-      <description>Te descarga cositas de YouTube, Vimeo....</description>
       <distrib icepatch="${application}.IcePatch2/server"/>
       <service-template id="IceStorm">
          <parameter name="instance-name" default="${application}.IceStorm"/>
@@ -42,6 +41,20 @@
             <adapter name="${service}.TopicManager" endpoints="${topic-manager-endpoints}" id="${instance-name}${node-id}.TopicManager" replica-group="${topic-manager-replica-group}"/>
          </service>
       </service-template>
+      <server-template id="DownloaderFactoryTemplate">
+         <server id="DownloaderFactory" activation="on-demand" exe="./downloader_factory.py" pwd="${application.distrib}">
+            <properties>
+               <property name="Ice.StdOut" value="${application.distrib}/downloader-out.txt"/>
+               <property name="Ice.ProgramName" value="${server}.Downloader"/>
+               <property name="IceStorm.TopicManager.Endpoints" value="tcp -p 10000"/>
+               <property name="IceStorm.Publish.Endpoints" value="tcp -p 2000"/>
+               <property name="IceStorm.TopicManager.Proxy" value="IceStorm/TopicManager:tcp -p 10000"/>
+            </properties>
+            <adapter name="DownloaderFactoryAdapter" endpoints="default" id="${server}.DownloaderFactoryAdapter">
+               <object identity="downloaderfactory" type="::TrawlNet::DownloaderFactory" property="Identity"/>
+            </adapter>
+         </server>
+      </server-template>
       <server-template id="Glacier2">
          <parameter name="instance-name" default="${application}.Glacier2"/>
          <parameter name="client-endpoints"/>
@@ -54,6 +67,20 @@
                <property name="Glacier2.InstanceName" value="${instance-name}"/>
                <property name="Glacier2.SessionTimeout" value="${session-timeout}"/>
             </properties>
+         </server>
+      </server-template>
+      <server-template id="IcePatch2">
+         <parameter name="instance-name" default="${application}.IcePatch2"/>
+         <parameter name="endpoints" default="default"/>
+         <parameter name="directory"/>
+         <server id="${instance-name}" activation="on-demand" application-distrib="false" exe="icepatch2server">
+            <properties>
+               <property name="IcePatch2.InstanceName" value="${instance-name}"/>
+               <property name="IcePatch2.Directory" value="${directory}"/>
+            </properties>
+            <adapter name="IcePatch2" endpoints="${endpoints}" id="${server}.IcePatch2">
+               <object identity="${instance-name}/server" type="::IcePatch2::FileServer"/>
+            </adapter>
          </server>
       </server-template>
       <server-template id="IceStorm">
@@ -78,7 +105,57 @@
             <service-instance template="IceStorm-HA" instance-name="${instance-name}" node-id="${node-id}" topic-manager-endpoints="${topic-manager-endpoints}" publish-endpoints="${publish-endpoints}" node-endpoints="${node-endpoints}" flush-timeout="${flush-timeout}" publish-replica-group="${publish-replica-group}" topic-manager-replica-group="${topic-manager-replica-group}"/>
          </icebox>
       </server-template>
+      <server-template id="OrchestratorTemplate">
+         <parameter name="index"/>
+         <server id="OrchestratorServer${index}" activation="on-demand" exe="./orchestrator.py" pwd="${application.distrib}">
+            <properties>
+               <property name="Ice.StdOut" value="${application.distrib}/server${index}-out.txt"/>
+               <property name="Ice.ProgramName" value="${server}.Orchestrator${index}"/>
+               <property name="Identity" value="orchestrator"/>
+            </properties>
+            <adapter name="OrchestratorAdapter" endpoints="default" id="${server}.OrchestratorAdapter" replica-group="OrchestratorReplicaGroup">
+               <object identity="orchestrator${index}" type="::TrawlNet::Orchestrator" property="Identity"/>
+            </adapter>
+         </server>
+      </server-template>
+      <server-template id="TransferFactoryTemplate">
+         <server id="TransferFactory" activation="on-demand" exe="./transfer_factory.py" pwd="${application.distrib}">
+            <properties>
+               <property name="Ice.StdOut" value="${application.distrib}/transfer-out.txt"/>
+               <property name="Ice.ProgramName" value="${server}.TransferFactory"/>
+            </properties>
+            <adapter name="TransferFactoryAdapter" endpoints="default" id="${server}.TransferFactoryAdapter">
+               <object identity="transferfactory" type="::TrawlNet::TransferFactory" property="Identity"/>
+            </adapter>
+         </server>
+      </server-template>
+      <replica-group id="OrchestratorReplicaGroup">
+         <load-balancing type="ordered" n-replicas="0"/>
+         <object identity="orchestrator" type="::TrawlNet::Orchestrator"/>
+      </replica-group>
       <node name="downloads-node">
+         <server-instance template="DownloaderFactoryTemplate"/>
+         <server-instance template="TransferFactoryTemplate"/>
+      </node>
+      <node name="orchestrator-node">
+         <server-instance template="OrchestratorTemplate" index="1"/>
+         <server-instance template="OrchestratorTemplate" index="2"/>
+         <server-instance template="OrchestratorTemplate" index="3"/>
+      </node>
+      <node name="registry-node">
+         <server-instance template="IcePatch2" directory="/tmp/YoutubeDownloaderApp">
+            <properties>
+               <property name="Ice.StdOut" value="${directory}/server-out.txt"/>
+            </properties>
+         </server-instance>
+         <server-instance template="IceStorm">
+            <properties service="YoutubeDownloaderApp.IceStorm">
+               <property name="IceStorm.TopicManager.Endpoints" value="tcp -p 10000"/>
+               <property name="IceStormAdmin.TopicManager.Default" value="IceStorm/TopicManager:tcp -p 10000"/>
+               <property name="IceStorm.Publish.Endpoints" value="tcp -p 2000"/>
+               <property name="IceBox.Service.IceStorm" value="IceStormService,37:createIceStorm"/>
+            </properties>
+         </server-instance>
       </node>
    </application>
 </icegrid>

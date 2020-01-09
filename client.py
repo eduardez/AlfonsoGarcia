@@ -18,14 +18,16 @@ DOWNLOADS_DIRECTORY = os.path.join(APP_DIRECTORY, 'downloads')
 class Client(Ice.Application):
     '''Clase cliente'''
     def run(self, argv):
-        orchestrator_dictionary = {}
+        proxy = self.communicator().stringToProxy('orchestrator')
 
-        for orchestrator_proxy in utils.readProxyfile():
-            proxy = self.communicator().stringToProxy(orchestrator_proxy)
-            orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
-            orchestrator_dictionary[orchestrator_proxy] = orchestrator
+        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
+        # orchestrator_dictionary = {}
+        # for orchestrator_proxy in utils.readProxyfile():
+        #     proxy = self.communicator().stringToProxy(orchestrator_proxy)
+        #     orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
+        #     orchestrator_dictionary[orchestrator_proxy] = orchestrator
 
-        orchestrator = random.choice(list(orchestrator_dictionary.values()))
+        # orchestrator = random.choice(list(orchestrator_dictionary.values()))
 
         if not orchestrator:
             raise RuntimeError('Invalid proxy')

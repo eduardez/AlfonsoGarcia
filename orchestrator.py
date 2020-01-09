@@ -109,8 +109,8 @@ class Server(Ice.Application):
     '''Código del servidor servidor'''
 
     def get_topic_manager(self):
-        key = 'IceStorm.TopicManager.Proxy'
-        proxy = self.communicator().propertyToProxy(key)
+        key = 'YoutubeDownloaderApp.IceStorm/TopicManager'
+        proxy = self.communicator().stringToProxy(key)
         if proxy is None:
             print("property {} not set".format(key))
             return None
@@ -139,17 +139,20 @@ class Server(Ice.Application):
         #     return 1
 
         # ---------------- Creacion del downloader factory --------------------
-        down_factory_proxy = args[1]
+        #down_factory_proxy = args[1]
+        down_factory_proxy = 'YoutubeDownloaderApp.IceStorm/TopicManager'
         proxy_downloader_factory = self.communicator().stringToProxy(down_factory_proxy)
         downloader_factory = TrawlNet.DownloaderFactoryPrx.checkedCast(proxy_downloader_factory)
 
         # ---------------- Creacion del transfer factory --------------------
-        transfer_factory_proxy = args[2]
+        #transfer_factory_proxy = args[2]
+        transfer_factory_proxy = 'YoutubeDownloaderApp.IceStorm/TopicManager'
         proxy_transfer_factory = self.communicator().stringToProxy(transfer_factory_proxy)
         transfer_factory = TrawlNet.TransferFactoryPrx.checkedCast(proxy_transfer_factory)
 
         # ---------------- Creacion de objetos --------------------
         broker = self.communicator()
+        properties = broker.getProperties()
         orchestrator_servant = OrchestratorI()  # Creamos el servant
         hello_servant = OrchestratorEvent()  # Servant del canal OrquestratorSync
         update_servant = UpdateEvent()
@@ -161,7 +164,8 @@ class Server(Ice.Application):
 
         # ------------------- proxys -------------------
         adapter = broker.createObjectAdapter("OrchestratorAdapter")
-        proxy = adapter.addWithUUID(orchestrator_servant)
+        id_orch = properties.getProperty('Identity')
+        proxy = adapter.add(orchestrator_servant, broker.stringToIdentity(id_orch))
         proxy_hello = adapter.addWithUUID(hello_servant)
         proxy_update = adapter.addWithUUID(update_servant)
         orchestrator_servant.proxy = proxy

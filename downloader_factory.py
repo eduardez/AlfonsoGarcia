@@ -66,10 +66,10 @@ class Server(Ice.Application):
     '''Código del servidor de descargas
     El downloader es publicador'''
     def get_topic_manager(self):
-        key = 'IceStorm.TopicManager.Proxy'
-        proxy = self.communicator().propertyToProxy(key)
+        key = 'YoutubeDownloaderApp.IceStorm/TopicManager'
+        proxy = self.communicator().stringToProxy(key)
         if proxy is None:
-            return None
+            raise Exception('Cannot found {0}'.format(key))
         return IceStorm.TopicManagerPrx.checkedCast(proxy)
 
     def get_topic(self, topic_name):
@@ -87,7 +87,7 @@ class Server(Ice.Application):
         broker = self.communicator()
         servant_downloader_factory = DownloaderFactoryI()
         servant_downloader_factory.iceApplication = self
-        adapter = broker.createObjectAdapter("DownloaderAdapter")
+        adapter = broker.createObjectAdapter("DownloaderFactoryAdapter")
         proxy = adapter.addWithUUID(servant_downloader_factory)
 
         topic_update = self.get_topic('UpdateEvents')
