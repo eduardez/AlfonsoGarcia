@@ -49,9 +49,10 @@
                <property name="IceStorm.TopicManager.Endpoints" value="tcp -p 10000"/>
                <property name="IceStorm.Publish.Endpoints" value="tcp -p 2000"/>
                <property name="IceStorm.TopicManager.Proxy" value="IceStorm/TopicManager:tcp -p 10000"/>
+               <property name="DownloaderFactoryIdentity" value="DownloaderFactory"/>
             </properties>
-            <adapter name="DownloaderFactoryAdapter" endpoints="default" id="${server}.DownloaderFactoryAdapter">
-               <object identity="downloaderfactory" type="::TrawlNet::DownloaderFactory" property="Identity"/>
+            <adapter name="DownloaderFactoryAdapter" endpoints="tcp" id="${server}.DownloaderFactoryAdapter">
+               <object identity="DownloaderFactory" type="::TrawlNet::DownloaderFactory" property="Identity"/>
             </adapter>
          </server>
       </server-template>
@@ -111,9 +112,8 @@
             <properties>
                <property name="Ice.StdOut" value="${application.distrib}/server${index}-out.txt"/>
                <property name="Ice.ProgramName" value="${server}.Orchestrator${index}"/>
-               <property name="Identity" value="orchestrator"/>
             </properties>
-            <adapter name="OrchestratorAdapter" endpoints="default" id="${server}.OrchestratorAdapter" replica-group="OrchestratorReplicaGroup">
+            <adapter name="OrchestratorAdapter" endpoints="tcp" id="${server}.OrchestratorAdapter" replica-group="OrchestratorReplicaGroup">
                <object identity="orchestrator${index}" type="::TrawlNet::Orchestrator" property="Identity"/>
             </adapter>
          </server>
@@ -123,9 +123,10 @@
             <properties>
                <property name="Ice.StdOut" value="${application.distrib}/transfer-out.txt"/>
                <property name="Ice.ProgramName" value="${server}.TransferFactory"/>
+               <property name="TransferFactoryIdentity" value="TransferFactory"/>
             </properties>
-            <adapter name="TransferFactoryAdapter" endpoints="default" id="${server}.TransferFactoryAdapter">
-               <object identity="transferfactory" type="::TrawlNet::TransferFactory" property="Identity"/>
+            <adapter name="TransferFactoryAdapter" endpoints="tcp" id="${server}.TransferFactoryAdapter">
+               <object identity="TransferFactory" type="::TrawlNet::TransferFactory" property="Identity"/>
             </adapter>
          </server>
       </server-template>

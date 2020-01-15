@@ -85,10 +85,14 @@ class Server(Ice.Application):
 
     def run(self, args):
         broker = self.communicator()
+        properties = broker.getProperties()
+        id_ = properties.getProperty('DownloaderFactoryIdentity')
+
         servant_downloader_factory = DownloaderFactoryI()
         servant_downloader_factory.iceApplication = self
         adapter = broker.createObjectAdapter("DownloaderFactoryAdapter")
-        proxy = adapter.addWithUUID(servant_downloader_factory)
+        proxy = adapter.add(servant_downloader_factory, broker.stringToIdentity(id_))
+
 
         topic_update = self.get_topic('UpdateEvents')
         publisher_update = topic_update.getPublisher()

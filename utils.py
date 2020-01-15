@@ -35,6 +35,7 @@ def addToList(name, hash):
 
 
 def jsonRead():
+    data = None
     try:
         with open(PATH_TO_JSON) as json_file:
             data = json.load(json_file)
@@ -43,10 +44,10 @@ def jsonRead():
         print('\nArchivo JSON no encontrado.')
         with open(PATH_TO_JSON, 'w') as file:
             file.write('{"canciones": []}')
-        return []
-      
+        return jsonRead()
+
 
 def jsonWrite(json_data):
     with open(PATH_TO_JSON, 'w') as salida:
-        salida.write(json.dumps(json_data, sort_keys=True,indent=4, separators=(',', ': ')))
+        salida.write(json.dumps(json_data, sort_keys=True, indent=4, separators=(',', ': ')))
 

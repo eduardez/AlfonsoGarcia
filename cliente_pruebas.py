@@ -18,20 +18,28 @@ DOWNLOADS_DIRECTORY = os.path.join(APP_DIRECTORY, 'downloads')
 class Client(Ice.Application):
     '''Clase cliente'''
     def run(self, argv):
-        proxy = self.communicator().stringToProxy('orchestrator')
 
-        orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
         # orchestrator_dictionary = {}
         # for orchestrator_proxy in utils.readProxyfile():
         #     proxy = self.communicator().stringToProxy(orchestrator_proxy)
         #     orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
         #     orchestrator_dictionary[orchestrator_proxy] = orchestrator
-
-        # orchestrator = random.choice(list(orchestrator_dictionary.values()))
+        url = 'https://www.youtube.com/watch?v=qYzR1fMJHvk'
+        file_info = self.descarga_directa(url)
 
         if not orchestrator:
             raise RuntimeError('Invalid proxy')
         print('Enviando peticion a \n' + str(orchestrator))
+
+
+
+
+
+
+
+
+
+
 
         if len(argv) > 2 and len(argv) < 4:
             if argv[1] == '--download':
@@ -43,7 +51,12 @@ class Client(Ice.Application):
             elif argv[1] == '--transfer':
                 print('Obteniendo: %s' % str(argv[2]))
                 file_name = self.checkExtension(argv[2])
-                self.transfer_request(file_name, orchestrator)
+                for orch in orchestrator_dictionary.values():
+                    try:
+                        self.transfer_request(file_name, orch)
+                    except Exception:
+                        pass
+
             else:
                 print('****Opcion no reconocido.\nSaliendo...')
         elif len(argv) == 1:
@@ -53,7 +66,7 @@ class Client(Ice.Application):
             return 0
         else:
             print('****ERROR EN LOS ARGUMENTOS.\nSaliendo...')
-
+            
     def checkExtension(self, file_name):
         if file_name.endswith('.mp3'):
             return file_name
@@ -87,7 +100,26 @@ class Client(Ice.Application):
                 if data:
                     file_.write(data)
             transfer.close()
+
         transfer.destroy()
         print('Transfer finished!')
+
+    #--------------------- PARTE TEMPORAL, LIMPIAR LUEGO ---------------#
+    def descarga_directa(self,url):
+        down_factory_proxy = 'DownloaderFactory -t -e 1.1 @ DownloaderFactory.DownloaderFactoryAdapter'
+        proxy_downloader_factory = self.communicator().stringToProxy(down_factory_proxy)
+        if proxy_downloader_factory is None:
+            print("property {} not set".format(down_factory_proxy))
+            return None
+        downloader_factory = TrawlNet.DownloaderFactoryPrx.checkedCast(proxy_downloader_factory)
+        downloader = downloader_factory.create() #Crear el downloader
+        if downloader is not None:
+            print(f'\nDescargando cancion.\nDownloader: {downloader}')
+            file_info = downloader.addDownloadTask(url)
+            self.addToList(file_info=file_info)
+            downloader.destroy()
+            return file_info
+        else:
+            print('***ERROR. No se ha encontrado ningun downloader')
 
 sys.exit(Client().main(sys.argv))

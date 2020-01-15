@@ -18,6 +18,7 @@ class OrchestratorI(TrawlNet.Orchestrator):
     downloader_factory = None
     transfer_factory = None
     proxy = None
+    name = None
 
     def downloadTask (self, url, current):
         print('\n[Orchestrator]Peticion de descarga, url: %s' % url)
@@ -140,13 +141,14 @@ class Server(Ice.Application):
 
         # ---------------- Creacion del downloader factory --------------------
         #down_factory_proxy = args[1]
-        down_factory_proxy = 'YoutubeDownloaderApp.IceStorm/TopicManager'
+      
+        down_factory_proxy = 'DownloaderFactory'
         proxy_downloader_factory = self.communicator().stringToProxy(down_factory_proxy)
         downloader_factory = TrawlNet.DownloaderFactoryPrx.checkedCast(proxy_downloader_factory)
 
         # ---------------- Creacion del transfer factory --------------------
         #transfer_factory_proxy = args[2]
-        transfer_factory_proxy = 'YoutubeDownloaderApp.IceStorm/TopicManager'
+        transfer_factory_proxy = 'TransferFactory'
         proxy_transfer_factory = self.communicator().stringToProxy(transfer_factory_proxy)
         transfer_factory = TrawlNet.TransferFactoryPrx.checkedCast(proxy_transfer_factory)
 
