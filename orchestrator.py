@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-#en el archivo config poner IceConfig.IPvVersion = 4 para librarnos de las ipv 6
-
-import sys, utils as utiles
-import random
-from pathlib import Path as path
-import Ice, IceStorm
+import sys
+import utils as utiles
+import Ice
+import IceStorm
 Ice.loadSlice('trawlnet.ice')
-import TrawlNet 
+import TrawlNet
 
 
 class OrchestratorI(TrawlNet.Orchestrator):
@@ -20,7 +18,7 @@ class OrchestratorI(TrawlNet.Orchestrator):
     proxy = None
     name = None
 
-    def downloadTask (self, url, current):
+    def downloadTask(self, url, current):
         print('\n[Orchestrator]Peticion de descarga, url: %s' % url)
         hash = ''
         name = ''
@@ -36,7 +34,7 @@ class OrchestratorI(TrawlNet.Orchestrator):
             print('\n[Orchestrator] ERROR*** Cancion ya descargada.')
             return file_info
         else:
-            downloader = self.downloader_factory.create() #Crear el downloader
+            downloader = self.downloader_factory.create()  # Crear el downloader
             if downloader is not None:
                 print(f'\nDescargando cancion.\nDownloader: {downloader}')
                 file_info = downloader.addDownloadTask(url)
@@ -76,7 +74,7 @@ class OrchestratorI(TrawlNet.Orchestrator):
     def announce(self, other_orchestrator, current=None):
         print('\n[Orchestrator]Anuncio de ' + str(other_orchestrator))
         self.orchestrator_list[other_orchestrator.ice_toString()] = other_orchestrator
-        print(f'\n[Orchestrator] Lista de orchestrators actualizada: {len(self.orchestrator_list)} orchestrators \n{str(self.orchestrator_list.keys())}')
+        print(f'\n[Orchestrator] Lista de orchestrators actualizada: \n{str(self.orchestrator_list.keys())}')
 
     def updateFiles(self, current=None):
         for file in self.getFileList():
@@ -84,17 +82,24 @@ class OrchestratorI(TrawlNet.Orchestrator):
 
 
 class OrchestratorEvent(TrawlNet.OrchestratorEvent):
-    ''' '''
+    '''
+    Servant del OrchestratorEvent.
+    Comunica que un nuevo Orchestrator ha sido creado.
+    '''
     orchestrator = None
 
     def hello(self, new_orchestrator, current=None):
         print('\n[OrchestratorEvent]--> Hello from ' + str(new_orchestrator))
-        self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator  # ice_toString() para devolver el proxy en str
-        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))  # llamo al announce del nuevo orchestrator para anunciarme
+        self.orchestrator.orchestrator_list[new_orchestrator.ice_toString()] = new_orchestrator
+        new_orchestrator.announce(TrawlNet.OrchestratorPrx.checkedCast(self.orchestrator.proxy))
         self.orchestrator.updateFiles()
 
 
 class UpdateEvent(TrawlNet.UpdateEvent):
+    '''
+    Servant del UpdateEvent.
+    Comunica que un nuevo archivo ha sido descargado.
+    '''
     orchestrator = None
 
     def newFile(self, file_info, current=None):
@@ -106,7 +111,9 @@ class UpdateEvent(TrawlNet.UpdateEvent):
 
 
 class Server(Ice.Application):
-    '''Código del servidor servidor'''
+    '''
+    Clase para mantener un servidor para el orchestrator
+    '''
 
     def get_topic_manager(self):
         key = 'YoutubeDownloaderApp.IceStorm/TopicManager'
@@ -129,21 +136,14 @@ class Server(Ice.Application):
             print("No se ha encontrado ese tonico")
             topic = topic_manager.create(topic_name)
         return topic
-    
-    def run(self, args):
-        # if len(args) < 2:
-        #     print('ERROR: No se han introducido el numero de argumentos valido.')
-        #     return 1
 
-        # ---------------- Creacion del downloader factory --------------------
-        #down_factory_proxy = args[1]
-      
+    def run(self, args):
+        # ---------------- Creacion del downloader factory -------------------
         down_factory_proxy = 'DownloaderFactory'
         proxy_downloader_factory = self.communicator().stringToProxy(down_factory_proxy)
         downloader_factory = TrawlNet.DownloaderFactoryPrx.checkedCast(proxy_downloader_factory)
 
         # ---------------- Creacion del transfer factory --------------------
-        #transfer_factory_proxy = args[2]
         transfer_factory_proxy = 'TransferFactory'
         proxy_transfer_factory = self.communicator().stringToProxy(transfer_factory_proxy)
         transfer_factory = TrawlNet.TransferFactoryPrx.checkedCast(proxy_transfer_factory)
@@ -151,16 +151,16 @@ class Server(Ice.Application):
         # ---------------- Creacion de objetos --------------------
         broker = self.communicator()
         properties = broker.getProperties()
-        orchestrator_servant = OrchestratorI()  # Creamos el servant
-        hello_servant = OrchestratorEvent()  # Servant del canal OrquestratorSync
+        orchestrator_servant = OrchestratorI()
+        hello_servant = OrchestratorEvent()
         update_servant = UpdateEvent()
 
         orchestrator_servant.downloader_factory = downloader_factory
         orchestrator_servant.transfer_factory = transfer_factory
-        hello_servant.orchestrator = orchestrator_servant  # Lo metemos para cuando llegue un hollo, actualizar el orq
+        hello_servant.orchestrator = orchestrator_servant
         update_servant.orchestrator = orchestrator_servant
 
-        # ------------------- proxys -------------------
+        # ---------------------- proxys ----------------------
         adapter = broker.createObjectAdapter("OrchestratorAdapter")
         id_orch = properties.getProperty('Identity')
         proxy = adapter.add(orchestrator_servant, broker.stringToIdentity(id_orch))
@@ -168,14 +168,14 @@ class Server(Ice.Application):
         proxy_update = adapter.addWithUUID(update_servant)
         orchestrator_servant.proxy = proxy
 
-        # ------------------- Subscripciones -------------------
+        # ------------------- Subscripciones ------------------
         topic_hello = self.get_topic('OrchestratorSync')
         topic_hello.subscribeAndGetPublisher({}, proxy_hello)
 
         topic_update = self.get_topic('UpdateEvents')
         topic_update.subscribeAndGetPublisher({}, proxy_update)
 
-        # ---------------- Publicaciones ----------------------
+        # ------------------- Publicaciones --------------------
         # Mensajes hello
         publisher_hello = topic_hello.getPublisher()
         publisher_hello_proxy = TrawlNet.OrchestratorEventPrx.uncheckedCast(publisher_hello)
@@ -185,7 +185,7 @@ class Server(Ice.Application):
         publisher_update_proxy = TrawlNet.UpdateEventPrx.uncheckedCast(publisher_update)
         orchestrator_servant.publisher_update_proxy = publisher_update_proxy
 
-        # --------------- Acciones sobre los proxys ---------------------
+        # -------------- Acciones sobre los proxys --------------
         publisher_hello_proxy.hello(TrawlNet.OrchestratorPrx.checkedCast(proxy))
         for file in orchestrator_servant.getFileList():
             publisher_update_proxy.newFile(file)
@@ -205,5 +205,3 @@ class Server(Ice.Application):
 if __name__ == "__main__":
     server = Server()
     sys.exit(server.main(sys.argv))
-
-

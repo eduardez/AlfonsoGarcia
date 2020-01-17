@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import Ice, IceStorm
+import Ice
+import IceStorm
 import os
 Ice.loadSlice('trawlnet.ice')
 import TrawlNet
@@ -63,8 +64,10 @@ class DownloaderFactoryI(TrawlNet.DownloaderFactory):
 
 
 class Server(Ice.Application):
-    '''Código del servidor de descargas
-    El downloader es publicador'''
+    '''
+    Código del servidor de descargas.
+    El downloader es unicamente publicador.
+    '''
     def get_topic_manager(self):
         key = 'YoutubeDownloaderApp.IceStorm/TopicManager'
         proxy = self.communicator().stringToProxy(key)
@@ -92,7 +95,6 @@ class Server(Ice.Application):
         servant_downloader_factory.iceApplication = self
         adapter = broker.createObjectAdapter("DownloaderFactoryAdapter")
         proxy = adapter.add(servant_downloader_factory, broker.stringToIdentity(id_))
-
 
         topic_update = self.get_topic('UpdateEvents')
         publisher_update = topic_update.getPublisher()
@@ -126,6 +128,7 @@ class NullLogger:
     def error(self, msg):
         pass
 
+
 _YOUTUBEDL_OPTS_ = {
     'format': 'bestaudio/best',
     'postprocessors': [{
@@ -136,12 +139,14 @@ _YOUTUBEDL_OPTS_ = {
     'logger': NullLogger()
 }
 
+
 def download_mp3(url, destination='./'):
     '''
     Synchronous download from YouTube
     '''
     options = {}
     task_status = {}
+
     def progress_hook(status):
         task_status.update(status)
     options.update(_YOUTUBEDL_OPTS_)

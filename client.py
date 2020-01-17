@@ -14,7 +14,9 @@ DOWNLOADS_DIRECTORY = os.path.join(APP_DIRECTORY, 'downloads')
 
 
 class Client(Ice.Application):
-    '''Clase cliente'''
+    '''
+    Clase cliente
+    '''
     def run(self, argv):
         proxy = self.communicator().stringToProxy('orchestrator')
         orchestrator = TrawlNet.OrchestratorPrx.checkedCast(proxy)
