@@ -42,7 +42,7 @@
          </service>
       </service-template>
       <server-template id="DownloaderFactoryTemplate">
-         <server id="DownloaderFactory" activation="always" exe="./downloader_factory.py" pwd="${application.distrib}">
+         <server id="DownloaderFactory" activation="on-demand" exe="./downloader_factory.py" pwd="${application.distrib}">
             <properties>
                <property name="Ice.StdOut" value="${application.distrib}/downloader-out.txt"/>
                <property name="Ice.ProgramName" value="${server}.Downloader"/>
@@ -108,7 +108,7 @@
       </server-template>
       <server-template id="OrchestratorTemplate">
          <parameter name="index"/>
-         <server id="OrchestratorServer${index}" activation="always" exe="./orchestrator.py" pwd="${application.distrib}">
+         <server id="OrchestratorServer${index}" activation="on-demand" exe="./orchestrator.py" pwd="${application.distrib}">
             <properties>
                <property name="Ice.StdOut" value="${application.distrib}/server${index}-out.txt"/>
                <property name="Ice.ProgramName" value="${server}.Orchestrator${index}"/>
@@ -120,7 +120,7 @@
          </server>
       </server-template>
       <server-template id="TransferFactoryTemplate">
-         <server id="TransferFactory" activation="always" exe="./transfer_factory.py" pwd="${application.distrib}">
+         <server id="TransferFactory" activation="on-demand" exe="./transfer_factory.py" pwd="${application.distrib}">
             <properties>
                <property name="Ice.StdOut" value="${application.distrib}/transfer-out.txt"/>
                <property name="Ice.ProgramName" value="${server}.TransferFactory"/>
@@ -136,13 +136,33 @@
          <object identity="orchestrator" type="::TrawlNet::Orchestrator"/>
       </replica-group>
       <node name="downloads-node">
-         <server-instance template="DownloaderFactoryTemplate"/>
-         <server-instance template="TransferFactoryTemplate"/>
+         <server-instance template="DownloaderFactoryTemplate">
+            <properties>
+               <property name="Enabled" value="True"/>
+            </properties>
+         </server-instance>
+         <server-instance template="TransferFactoryTemplate">
+            <properties>
+               <property name="Enabled" value="True"/>
+            </properties>
+         </server-instance>
       </node>
       <node name="orchestrator-node">
-         <server-instance template="OrchestratorTemplate" index="1"/>
-         <server-instance template="OrchestratorTemplate" index="2"/>
-         <server-instance template="OrchestratorTemplate" index="3"/>
+         <server-instance template="OrchestratorTemplate" index="1">
+            <properties>
+               <property name="Enabled" value="True"/>
+            </properties>
+         </server-instance>
+         <server-instance template="OrchestratorTemplate" index="2">
+            <properties>
+               <property name="Enabled" value="True"/>
+            </properties>
+         </server-instance>
+         <server-instance template="OrchestratorTemplate" index="3">
+            <properties>
+               <property name="Enabled" value="True"/>
+            </properties>
+         </server-instance>
       </node>
       <node name="registry-node">
          <server-instance template="IcePatch2" directory="/tmp/YoutubeDownloaderApp">
