@@ -52,23 +52,22 @@ class OrchestratorI(TrawlNet.Orchestrator):
         archivo = utiles.jsonRead()
         if not archivo:
             return archivo
-        for cancion in archivo['canciones']:
+        for k, v in archivo.items():
             file_info = TrawlNet.FileInfo()
-            file_info.name = cancion['name']
-            file_info.hash = cancion['hash']
+            file_info.name = v
+            file_info.hash = k
             list_file.append(file_info)
         return list_file
 
     def getFile(self, file_name, current=None):
         print(f'\n[Orchestrator]Peticion de transferencia. Archivo: {file_name}')
         transfer = None
-        for orch in self.orchestrator_list.values():
-            try:
-                transfer = self.transfer_factory.create(file_name)
-            except Ice.UnknownException:
-                print('\n[Orchestrator]Este orchestrator no tiene ese archivo. Probando con otro...\n')
-            finally:
-                return transfer
+        try:
+            transfer = self.transfer_factory.create(file_name)
+        except Ice.UnknownException:
+            print('\n[Orchestrator]Este orchestrator no tiene ese archivo. Probando con otro...\n')
+        finally:
+            return transfer
 
     def addToList(self, file_info, current=None):
         json = utiles.addToList(file_info.name, file_info.hash)
@@ -130,10 +129,7 @@ class Server(Ice.Application):
             print("No se ha encontrado ese tonico")
             topic = topic_manager.create(topic_name)
         return topic
-
-    def addProxyToFile(self, proxy):
-        utiles.appendProxyToFile(proxy)
-
+    
     def run(self, args):
         # if len(args) < 2:
         #     print('ERROR: No se han introducido el numero de argumentos valido.')
@@ -196,7 +192,6 @@ class Server(Ice.Application):
 
         # -----------------------------------------------
         print(proxy, flush=True)
-        self.addProxyToFile(proxy.ice_toString())
 
         adapter.activate()
         self.shutdownOnInterrupt()
@@ -205,11 +200,6 @@ class Server(Ice.Application):
         topic_update.unsubscribe(proxy_update)
 
         return 0
-
-
-def readProxy():
-    with open('./proxy.out', 'r') as f:
-        return f.readline() 
 
 
 if __name__ == "__main__":

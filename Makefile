@@ -16,13 +16,13 @@ run: clean
 	$(MAKE) run-orchestrator-node
 
 run-client-download:
-	echo "Añade la ejecución del cliente para realizar una descarga"
+	python3 client.py --download "https://www.youtube.com/watch?v=L38Z0YNJfCI" --Ice.Config=client.config
 
 run-client-transfer:
-	echo "Añade la ejecución del cliente para realizar una transferencia"
+	python3 client.py --transfer "Ladilla Rusa - Macaulay Culkin (VIDEOCLIP)" --Ice.Config=client.config
 
 run-client-list:
-	echo "Añade la ejecución del cliente para obtener la lista de canciones"
+	python3 client.py --Ice.Config=client.config
 
 run-registry-node: /tmp/db/registry /tmp/db/registry-node/servers 
 	icegridnode --Ice.Config=registry-node.config

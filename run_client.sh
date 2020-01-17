@@ -2,7 +2,7 @@
 #
 
 echo "Downloading audio..."
-./client.py --download "https://www.youtube.com/watch?v=PaFnO5LKTSs" \
+./client.py --download "https://www.youtube.com/watch?v=9Meg1-O2k5Q" \
 --Ice.Config=client.config
 
 echo ""
@@ -11,5 +11,5 @@ echo "List request..."
 
 echo ""
 echo "Init transfer..."
-./client.py --transfer "Spiderman" \
+./client.py --transfer "Poseidón" \
 --Ice.Config=client.config

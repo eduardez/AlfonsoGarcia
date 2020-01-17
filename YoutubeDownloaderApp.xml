@@ -112,6 +112,7 @@
             <properties>
                <property name="Ice.StdOut" value="${application.distrib}/server${index}-out.txt"/>
                <property name="Ice.ProgramName" value="${server}.Orchestrator${index}"/>
+               <property name="Identity" value="orchestrator"/>
             </properties>
             <adapter name="OrchestratorAdapter" endpoints="tcp" id="${server}.OrchestratorAdapter" replica-group="OrchestratorReplicaGroup">
                <object identity="orchestrator${index}" type="::TrawlNet::Orchestrator" property="Identity"/>

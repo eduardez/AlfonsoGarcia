@@ -6,23 +6,9 @@ import json
 PATH_TO_JSON = './file_list.json'
 
 
-def appendProxyToFile(proxy):
-    tmp_proxy_file = open("/tmp/trawlnet_proxylist", "a+")
-    tmp_proxy_file.write(proxy + '\n')
-
-
-def readProxyfile():
-    proxy_array = []
-    with open('/tmp/trawlnet_proxylist') as proxy_list_file:
-        for line in proxy_list_file:
-            proxy_array.append(line.rstrip('\n'))
-    return proxy_array
-
-
 def isInList(hash):
-    json = jsonRead()
-    for stored_songs in json['canciones']:
-        if stored_songs['hash'] == hash:
+    for k in jsonRead():
+        if k == hash:
             return True
         else:
             False
@@ -30,7 +16,7 @@ def isInList(hash):
 
 def addToList(name, hash):
     json = jsonRead()
-    json['canciones'].append({'name': name, 'hash': hash})
+    json.update({hash : name})
     return json
 
 
@@ -43,7 +29,7 @@ def jsonRead():
     except Exception:
         print('\nArchivo JSON no encontrado.')
         with open(PATH_TO_JSON, 'w') as file:
-            file.write('{"canciones": []}')
+            file.write('{}')
         return jsonRead()
 
 
